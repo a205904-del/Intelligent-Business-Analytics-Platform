@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Data - IntelliBiz</title>
     <link rel="stylesheet" href="style.css">
+    <!-- XLSX library for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
 </head>
 
 <body>
@@ -39,17 +41,26 @@
                 <label for="file-upload" style="cursor: pointer; padding: 12px 30px; background: var(--primary-gradient); color: white; border-radius: 10px; display: inline-block; font-weight: 600;" data-en="Browse Files" data-zh="浏览文件">
                     Browse Files
                 </label>
-                <input id="file-upload" type="file" accept=".xlsx,.csv" hidden>
+                <input id="file-upload" type="file" accept=".xlsx,.xls,.csv" hidden>
             </div>
         </div>
 
-        <button onclick="analyzeData()" data-en="Analyze Data Now" data-zh="立即分析数据">Analyze Data Now</button>
+        <!-- Status message area -->
+        <div id="statusMessage" style="margin: 20px 0; padding: 15px; border-radius: 10px; display: none; text-align: left;">
+            <span id="statusText"></span>
+        </div>
+
+        <button onclick="analyzeData()" id="analyzeButton" data-en="Analyze Data Now" data-zh="立即分析数据">Analyze Data Now</button>
         <div class="supported-files" data-en="✅ Supported formats: .xlsx .xls .csv" data-zh="✅ 支持的格式：.xlsx .xls .csv">✅ Supported formats: .xlsx .xls .csv</div>
     </div>
 
+    <script src="excelParser.js"></script>
+    <script src="dataStorage.js"></script>
+    <script src="analyticsCalculator.js"></script>
     <script>
         let currentLang = localStorage.getItem('language') || 'en';
         let selectedFile = null;
+        let isProcessing = false;
 
         function setLanguage(lang) {
             currentLang = lang;
@@ -111,21 +122,125 @@
             if (files.length) {
                 fileInput.files = files;
                 selectedFile = files[0];
+                showStatus('File selected: ' + selectedFile.name, 'success');
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length) {
                 selectedFile = e.target.files[0];
+                showStatus('File selected: ' + selectedFile.name, 'success');
             }
         });
 
-        function analyzeData() {
-            if (selectedFile) {
-                window.location.href = 'dashboard.html';
-            } else {
-                const alertMsg = currentLang === 'en' ? 'Please select a file first!' : '请先选择文件！';
-                alert(alertMsg);
+        /**
+         * Display status message to user
+         * @param {string} message - Message to display
+         * @param {string} type - Type: 'success', 'error', 'info'
+         */
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            const statusText = document.getElementById('statusText');
+            
+            statusText.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            // Style based on type
+            statusDiv.style.backgroundColor = 
+                type === 'success' ? 'rgba(34, 197, 94, 0.1)' :
+                type === 'error' ? 'rgba(239, 68, 68, 0.1)' :
+                'rgba(59, 130, 246, 0.1)';
+            
+            statusText.style.color = 
+                type === 'success' ? '#16a34a' :
+                type === 'error' ? '#dc2626' :
+                '#2563eb';
+        }
+
+        /**
+         * Hide status message
+         */
+        function hideStatus() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        /**
+         * Analyze uploaded data file
+         */
+        async function analyzeData() {
+            // Validation
+            if (!selectedFile) {
+                const alertMsg = currentLang === 'en' 
+                    ? 'Please select a file first!' 
+                    : '请先选择文件！';
+                showStatus(alertMsg, 'error');
+                return;
+            }
+
+            // Prevent multiple submissions
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const analyzeButton = document.getElementById('analyzeButton');
+            const originalText = analyzeButton.textContent;
+            analyzeButton.textContent = currentLang === 'en' ? 'Processing...' : '处理中...';
+            analyzeButton.disabled = true;
+
+            try {
+                // Show processing message
+                const processingMsg = currentLang === 'en' 
+                    ? 'Processing your file...' 
+                    : '正在处理您的文件...';
+                showStatus(processingMsg, 'info');
+
+                // Parse the file
+                const parsedData = await ExcelParser.parseFile(selectedFile);
+                
+                // Validate data
+                if (!parsedData.rows || parsedData.rows.length === 0) {
+                    throw new Error(currentLang === 'en' 
+                        ? 'No data found in file' 
+                        : '文件中未找到数据');
+                }
+
+                // Calculate metrics
+                const metrics = AnalyticsCalculator.calculateMetrics(
+                    parsedData.rows,
+                    parsedData.columnHeaders
+                );
+
+                // Save data to storage
+                const storageData = {
+                    rows: parsedData.rows,
+                    columnHeaders: parsedData.columnHeaders,
+                    fileName: selectedFile.name,
+                    metrics: metrics
+                };
+
+                DataStorage.saveData(storageData);
+
+                // Show success message
+                const successMsg = currentLang === 'en' 
+                    ? `Successfully processed ${parsedData.rows.length} rows!` 
+                    : `成功处理 ${parsedData.rows.length} 行！`;
+                showStatus(successMsg, 'success');
+
+                // Redirect to dashboard after 1.5 seconds
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                const errorMsg = error.message || (currentLang === 'en' 
+                    ? 'Error processing file' 
+                    : '处理文件出错');
+                showStatus(errorMsg, 'error');
+
+                // Reset button
+                isProcessing = false;
+                analyzeButton.textContent = originalText;
+                analyzeButton.disabled = false;
             }
         }
 

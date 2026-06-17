@@ -275,6 +275,14 @@ button:active {
     background-clip: text;
 }
 
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    vertical-align: middle;
+    margin-right: 12px;
+    display: inline-block;
+}
+
 .card p {
     color: #64748b;
     line-height: 1.8;

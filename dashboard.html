@@ -26,23 +26,33 @@
 
     <div class="dashboard-container">
         <h1 data-en="📊 Business Dashboard" data-zh="📊 业务仪表板">📊 Business Dashboard</h1>
+        
+        <!-- File info section -->
+        <div id="fileInfo" style="margin-bottom: 30px; padding: 15px 20px; background: rgba(102, 126, 234, 0.05); border-radius: 10px; border-left: 4px solid rgba(102, 126, 234, 0.5); display: none;">
+            <small style="color: #94a3b8;">
+                <span data-en="File:" data-zh="文件：">File:</span> 
+                <span id="fileName" style="font-weight: 600; color: #667eea;"></span>
+                <span data-en="| Uploaded:" data-zh="| 上传时间：">| Uploaded:</span> 
+                <span id="uploadTime" style="font-weight: 600; color: #667eea;"></span>
+            </small>
+        </div>
 
         <div class="kpi-grid">
-            <div class="kpi-card" data-value="128450">
+            <div class="kpi-card" data-value="0">
                 <h3 data-en="Revenue" data-zh="收入">Revenue</h3>
-                <p>RM128,450</p>
+                <p id="revenueValue">RM0</p>
             </div>
-            <div class="kpi-card" data-value="2315">
+            <div class="kpi-card" data-value="0">
                 <h3 data-en="Orders" data-zh="订单">Orders</h3>
-                <p>2,315</p>
+                <p id="ordersValue">0</p>
             </div>
-            <div class="kpi-card" data-value="18.4">
+            <div class="kpi-card" data-value="0">
                 <h3 data-en="Growth Rate" data-zh="增长率">Growth Rate</h3>
-                <p>+18.4%</p>
+                <p id="growthValue">+0%</p>
             </div>
-            <div class="kpi-card" data-value="1">
+            <div class="kpi-card" data-value="0">
                 <h3 data-en="Top Product" data-zh="热销产品">Top Product</h3>
-                <p>Product A</p>
+                <p id="productValue">Unknown</p>
             </div>
         </div>
 
@@ -50,8 +60,15 @@
             <h2 data-en="📈 Sales Trend Chart" data-zh="📈 销售趋势图">📈 Sales Trend Chart</h2>
             <p data-en="Advanced chart visualization coming in Version 2 with real-time data updates" data-zh="第 2 版中将推出带实时数据更新的高级图表可视化">Advanced chart visualization coming in Version 2 with real-time data updates</p>
         </div>
+
+        <!-- Clear data button -->
+        <div style="text-align: center; margin-top: 40px;">
+            <button onclick="clearDataAndReset()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 12px 30px; font-size: 14px;" data-en="Upload New Data" data-zh="上传新数据">Upload New Data</button>
+        </div>
     </div>
 
+    <script src="dataStorage.js"></script>
+    <script src="analyticsCalculator.js"></script>
     <script>
         let currentLang = localStorage.getItem('language') || 'en';
 
@@ -93,9 +110,72 @@
             document.documentElement.lang = currentLang;
         }
 
+        /**
+         * Load and display data from storage
+         */
+        function loadDashboardData() {
+            const storedData = DataStorage.getData();
+
+            if (storedData && storedData.metrics) {
+                // Display file information
+                const fileInfoDiv = document.getElementById('fileInfo');
+                const fileName = document.getElementById('fileName');
+                const uploadTime = document.getElementById('uploadTime');
+
+                fileName.textContent = storedData.fileName || 'Unknown File';
+                
+                if (storedData.uploadTime) {
+                    const date = new Date(storedData.uploadTime);
+                    uploadTime.textContent = date.toLocaleString(currentLang === 'en' ? 'en-MY' : 'zh-CN');
+                }
+
+                fileInfoDiv.style.display = 'block';
+
+                // Get metrics
+                const metrics = storedData.metrics;
+
+                // Update KPI values
+                document.getElementById('revenueValue').textContent = 
+                    AnalyticsCalculator.formatNumber(metrics.totalRevenue, 'revenue');
+                
+                document.getElementById('ordersValue').textContent = 
+                    AnalyticsCalculator.formatNumber(metrics.totalOrders, 'orders');
+                
+                document.getElementById('growthValue').textContent = 
+                    AnalyticsCalculator.formatNumber(metrics.growthRate, 'growth');
+                
+                document.getElementById('productValue').textContent = metrics.topProduct;
+
+                // Update data attributes for animation
+                document.querySelectorAll('.kpi-card')[0].setAttribute('data-value', metrics.totalRevenue);
+                document.querySelectorAll('.kpi-card')[1].setAttribute('data-value', metrics.totalOrders);
+                document.querySelectorAll('.kpi-card')[2].setAttribute('data-value', metrics.growthRate);
+
+                console.log('Dashboard data loaded successfully');
+            } else {
+                // No data - show default values
+                console.log('No data found, displaying defaults');
+                document.getElementById('fileInfo').style.display = 'none';
+            }
+        }
+
+        /**
+         * Clear stored data and redirect to upload page
+         */
+        function clearDataAndReset() {
+            DataStorage.clearData();
+            const confirmMsg = currentLang === 'en' 
+                ? 'Data cleared. Redirecting to upload page...' 
+                : '数据已清除。重定向到上传页面...';
+            alert(confirmMsg);
+            window.location.href = 'upload.html';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             updatePageLanguage();
+            loadDashboardData();
 
+            // Animate cards
             const cards = document.querySelectorAll('.kpi-card');
             cards.forEach((card, index) => {
                 setTimeout(() => {
