@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - IntelliBiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <nav>
+        <div class="logo">🚀 IntelliBiz</div>
+        <div class="nav-links">
+            <span onclick="window.location.href='index.html'" data-en="Home" data-zh="首页">Home</span>
+            <span data-en="Dashboard" data-zh="仪表板">Dashboard</span>
+            <span data-en="Reports" data-zh="报告">Reports</span>
+        </div>
+        <div class="lang-toggle" onclick="toggleLanguage()">
+            <span class="active" id="langEN">EN</span>
+            <span>/</span>
+            <span class="inactive" id="langZH">中文</span>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <h1 data-en="📊 Business Dashboard" data-zh="📊 业务仪表板">📊 Business Dashboard</h1>
+
+        <div class="kpi-grid">
+            <div class="kpi-card" data-value="128450">
+                <h3 data-en="Revenue" data-zh="收入">Revenue</h3>
+                <p>RM128,450</p>
+            </div>
+            <div class="kpi-card" data-value="2315">
+                <h3 data-en="Orders" data-zh="订单">Orders</h3>
+                <p>2,315</p>
+            </div>
+            <div class="kpi-card" data-value="18.4">
+                <h3 data-en="Growth Rate" data-zh="增长率">Growth Rate</h3>
+                <p>+18.4%</p>
+            </div>
+            <div class="kpi-card" data-value="1">
+                <h3 data-en="Top Product" data-zh="热销产品">Top Product</h3>
+                <p>Product A</p>
+            </div>
+        </div>
+
+        <div class="chart-placeholder">
+            <h2 data-en="📈 Sales Trend Chart" data-zh="📈 销售趋势图">📈 Sales Trend Chart</h2>
+            <p data-en="Advanced chart visualization coming in Version 2 with real-time data updates" data-zh="第 2 版中将推出带实时数据更新的高级图表可视化">Advanced chart visualization coming in Version 2 with real-time data updates</p>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            updatePageLanguage();
+        }
+
+        function toggleLanguage() {
+            const newLang = currentLang === 'en' ? 'zh' : 'en';
+            setLanguage(newLang);
+        }
+
+        function updatePageLanguage() {
+            const elements = document.querySelectorAll('[data-en][data-zh]');
+            elements.forEach(el => {
+                if (currentLang === 'en') {
+                    el.textContent = el.getAttribute('data-en');
+                } else {
+                    el.textContent = el.getAttribute('data-zh');
+                }
+            });
+
+            const langEN = document.getElementById('langEN');
+            const langZH = document.getElementById('langZH');
+            if (currentLang === 'en') {
+                langEN.classList.add('active');
+                langEN.classList.remove('inactive');
+                langZH.classList.remove('active');
+                langZH.classList.add('inactive');
+            } else {
+                langZH.classList.add('active');
+                langZH.classList.remove('inactive');
+                langEN.classList.remove('active');
+                langEN.classList.add('inactive');
+            }
+
+            document.documentElement.lang = currentLang;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePageLanguage();
+
+            const cards = document.querySelectorAll('.kpi-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.6s ease-out';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+    </script>
+
+</body>
+
+</html>
