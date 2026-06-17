@@ -1,7 +1,7 @@
 /**
  * Business Analytics Calculator Module
  * Calculates key metrics from parsed business data
- * Supports flexible column name detection (revenue, orders, products)
+ * Supports flexible column name detection (revenue, orders, products, profit, categories, dates)
  */
 
 const AnalyticsCalculator = {
@@ -20,18 +20,36 @@ const AnalyticsCalculator = {
     const revenueColumn = this.findColumn(columnHeaders, ['revenue', 'sales', 'total', 'amount']);
     const ordersColumn = this.findColumn(columnHeaders, ['orders', 'quantity', 'count', 'qty']);
     const productColumn = this.findColumn(columnHeaders, ['product', 'name', 'item']);
+    const profitColumn = this.findColumn(columnHeaders, ['profit', 'net', 'margin', 'earnings']);
+    const categoryColumn = this.findColumn(columnHeaders, ['category', 'type', 'class', 'segment']);
+    const dateColumn = this.findColumn(columnHeaders, ['date', 'month', 'time', 'period']);
 
-    // Calculate metrics
+    // Calculate basic metrics
     const totalRevenue = this.calculateTotalRevenue(rows, revenueColumn);
     const totalOrders = this.calculateTotalOrders(rows, ordersColumn);
+    const totalProfit = this.calculateTotalProfit(rows, profitColumn);
     const growthRate = this.calculateGrowthRate(rows, revenueColumn);
     const topProduct = this.findTopProduct(rows, productColumn, revenueColumn);
+    
+    // Calculate category-based metrics
+    const categoryMetrics = this.calculateCategoryMetrics(rows, categoryColumn, revenueColumn, profitColumn);
+    const topCategory = categoryMetrics.topCategory;
+    const revenueByCategory = categoryMetrics.byRevenue;
+    const profitByCategory = categoryMetrics.byProfit;
+
+    // Calculate monthly trends
+    const monthlyTrends = this.calculateMonthlyTrends(rows, dateColumn, revenueColumn, profitColumn);
 
     return {
       totalRevenue,
+      totalProfit,
       totalOrders,
       growthRate,
       topProduct,
+      topCategory,
+      revenueByCategory,
+      profitByCategory,
+      monthlyTrends,
       dataFound: true
     };
   },
@@ -63,6 +81,21 @@ const AnalyticsCalculator = {
    * @returns {number} Total revenue
    */
   calculateTotalRevenue(rows, column) {
+    if (!column) return 0;
+
+    return rows.reduce((sum, row) => {
+      const value = this.parseNumber(row[column]);
+      return sum + value;
+    }, 0);
+  },
+
+  /**
+   * Calculate total profit
+   * @param {Array} rows - Data rows
+   * @param {string} column - Column name containing profit
+   * @returns {number} Total profit
+   */
+  calculateTotalProfit(rows, column) {
     if (!column) return 0;
 
     return rows.reduce((sum, row) => {
@@ -138,6 +171,118 @@ const AnalyticsCalculator = {
   },
 
   /**
+   * Calculate category-based metrics
+   * @param {Array} rows - Data rows
+   * @param {string} categoryColumn - Column name for categories
+   * @param {string} revenueColumn - Column name for revenue
+   * @param {string} profitColumn - Column name for profit
+   * @returns {Object} Category metrics
+   */
+  calculateCategoryMetrics(rows, categoryColumn, revenueColumn, profitColumn) {
+    const categoryData = {};
+    
+    rows.forEach(row => {
+      const category = categoryColumn ? (row[categoryColumn] || 'Other') : 'All';
+      
+      if (!categoryData[category]) {
+        categoryData[category] = {
+          revenue: 0,
+          profit: 0,
+          count: 0
+        };
+      }
+
+      if (revenueColumn) {
+        categoryData[category].revenue += this.parseNumber(row[revenueColumn]);
+      }
+      if (profitColumn) {
+        categoryData[category].profit += this.parseNumber(row[profitColumn]);
+      }
+      categoryData[category].count++;
+    });
+
+    // Find top category by revenue
+    let topCategory = 'No Category Data';
+    let maxRevenue = 0;
+    
+    const byRevenue = [];
+    const byProfit = [];
+
+    Object.entries(categoryData).forEach(([category, data]) => {
+      byRevenue.push({ category, value: data.revenue });
+      byProfit.push({ category, value: data.profit });
+      
+      if (data.revenue > maxRevenue) {
+        maxRevenue = data.revenue;
+        topCategory = category;
+      }
+    });
+
+    // Sort by value (descending)
+    byRevenue.sort((a, b) => b.value - a.value);
+    byProfit.sort((a, b) => b.value - a.value);
+
+    return {
+      topCategory,
+      byRevenue: byRevenue.slice(0, 5), // Top 5
+      byProfit: byProfit.slice(0, 5)    // Top 5
+    };
+  },
+
+  /**
+   * Calculate monthly trend analysis
+   * @param {Array} rows - Data rows
+   * @param {string} dateColumn - Column name for dates
+   * @param {string} revenueColumn - Column name for revenue
+   * @param {string} profitColumn - Column name for profit
+   * @returns {Array} Monthly trend data
+   */
+  calculateMonthlyTrends(rows, dateColumn, revenueColumn, profitColumn) {
+    const monthlyData = {};
+
+    rows.forEach(row => {
+      let month = 'Unknown Month';
+      
+      if (dateColumn && row[dateColumn]) {
+        try {
+          const date = new Date(row[dateColumn]);
+          if (!isNaN(date.getTime())) {
+            month = date.toLocaleString('en-MY', { year: 'numeric', month: 'short' });
+          }
+        } catch (e) {
+          // Keep default month
+        }
+      }
+
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          revenue: 0,
+          profit: 0,
+          count: 0
+        };
+      }
+
+      if (revenueColumn) {
+        monthlyData[month].revenue += this.parseNumber(row[revenueColumn]);
+      }
+      if (profitColumn) {
+        monthlyData[month].profit += this.parseNumber(row[profitColumn]);
+      }
+      monthlyData[month].count++;
+    });
+
+    // Convert to array and sort
+    const trends = Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      revenue: data.revenue,
+      profit: data.profit,
+      orders: data.count
+    }));
+
+    return trends;
+  },
+
+  /**
    * Parse string to number (handles various formats)
    * @param {any} value - Value to parse
    * @returns {number} Parsed number or 0 if invalid
@@ -159,11 +304,11 @@ const AnalyticsCalculator = {
   /**
    * Format number for display
    * @param {number} num - Number to format
-   * @param {string} type - Type of number (revenue, orders, growth)
+   * @param {string} type - Type of number (revenue, orders, growth, profit)
    * @returns {string} Formatted string
    */
   formatNumber(num, type = 'general') {
-    if (type === 'revenue') {
+    if (type === 'revenue' || type === 'profit') {
       return 'RM' + num.toLocaleString('en-MY', { 
         maximumFractionDigits: 0 
       });
@@ -183,9 +328,14 @@ const AnalyticsCalculator = {
   getDefaultMetrics() {
     return {
       totalRevenue: 0,
+      totalProfit: 0,
       totalOrders: 0,
       growthRate: 0,
       topProduct: 'No Data',
+      topCategory: 'No Data',
+      revenueByCategory: [],
+      profitByCategory: [],
+      monthlyTrends: [],
       dataFound: false
     };
   }

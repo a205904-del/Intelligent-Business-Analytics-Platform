@@ -1,0 +1,10 @@
+Product,Category,Revenue,Profit,Orders,Date
+Widget A,Electronics,50000,12500,500,2026-01-15
+Widget B,Electronics,45000,9000,450,2026-01-20
+Gadget A,Home,60000,18000,600,2026-01-25
+Gadget B,Home,55000,16500,550,2026-02-05
+Tool A,Tools,40000,8000,400,2026-02-10
+Tool B,Tools,38000,7600,380,2026-02-15
+Widget C,Electronics,52000,13000,520,2026-03-10
+Gadget C,Home,62000,18600,620,2026-03-20
+Tool C,Tools,42000,8400,420,2026-03-25

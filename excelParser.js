@@ -134,47 +134,67 @@ const ExcelParser = {
     return new Promise((resolve, reject) => {
       // Check if XLSX library is loaded
       if (typeof XLSX === 'undefined') {
-        reject(new Error('XLSX library not loaded. Please reload the page.'));
-        return;
+        // Try to wait for it to load
+        let attempts = 0;
+        const checkXLSX = setInterval(() => {
+          attempts++;
+          if (typeof XLSX !== 'undefined') {
+            clearInterval(checkXLSX);
+            this.parseExcelWithXLSX(file, resolve, reject);
+          } else if (attempts > 50) {
+            clearInterval(checkXLSX);
+            reject(new Error('XLSX library failed to load. Please check your internet connection and reload the page.'));
+          }
+        }, 100);
+      } else {
+        this.parseExcelWithXLSX(file, resolve, reject);
       }
-
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        try {
-          const data = e.target.result;
-          const workbook = XLSX.read(data, { type: 'array' });
-          
-          if (workbook.SheetNames.length === 0) {
-            throw new Error('Excel file has no sheets');
-          }
-
-          // Parse first sheet
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          
-          // Convert sheet to JSON
-          const rows = XLSX.utils.sheet_to_json(worksheet);
-          
-          if (rows.length === 0) {
-            throw new Error('Excel sheet is empty');
-          }
-
-          // Get column headers
-          const columnHeaders = Object.keys(rows[0]);
-
-          resolve({
-            rows,
-            columnHeaders,
-            fileName: file.name
-          });
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      reader.onerror = () => reject(new Error('Failed to read Excel file'));
-      reader.readAsArrayBuffer(file);
     });
+  },
+
+  /**
+   * Internal method to parse Excel once XLSX is available
+   * @param {File} file - Excel file to parse
+   * @param {Function} resolve - Promise resolve function
+   * @param {Function} reject - Promise reject function
+   */
+  parseExcelWithXLSX(file, resolve, reject) {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        if (workbook.SheetNames.length === 0) {
+          throw new Error('Excel file has no sheets');
+        }
+
+        // Parse first sheet
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert sheet to JSON
+        const rows = XLSX.utils.sheet_to_json(worksheet);
+        
+        if (rows.length === 0) {
+          throw new Error('Excel sheet is empty');
+        }
+
+        // Get column headers
+        const columnHeaders = Object.keys(rows[0]);
+
+        resolve({
+          rows,
+          columnHeaders,
+          fileName: file.name
+        });
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(new Error('Failed to read Excel file'));
+    reader.readAsArrayBuffer(file);
   }
 };

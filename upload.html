@@ -6,8 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Data - IntelliBiz</title>
     <link rel="stylesheet" href="style.css">
-    <!-- XLSX library for Excel parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <!-- XLSX library for Excel parsing - Multiple CDN sources for reliability -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        // Fallback CDN if primary fails
+        if (typeof XLSX === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            script.onload = function() {
+                console.log('XLSX library loaded from fallback CDN');
+                window.XLSXLoaded = true;
+            };
+            script.onerror = function() {
+                console.error('Failed to load XLSX from both CDNs');
+            };
+            document.head.appendChild(script);
+        } else {
+            window.XLSXLoaded = true;
+        }
+    </script>
 </head>
 
 <body>

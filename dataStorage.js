@@ -14,6 +14,7 @@ const DataStorage = {
    * @param {Array} data.rows - Array of data rows
    * @param {string} data.fileName - Name of uploaded file
    * @param {Date} data.uploadTime - When the data was uploaded
+   * @param {Object} data.metrics - Calculated metrics
    */
   saveData(data) {
     try {
@@ -21,7 +22,8 @@ const DataStorage = {
         rows: data.rows,
         fileName: data.fileName,
         uploadTime: new Date().toISOString(),
-        columnHeaders: data.columnHeaders || []
+        columnHeaders: data.columnHeaders || [],
+        metrics: data.metrics || {}
       };
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(storageData));
       console.log('Data saved successfully');
